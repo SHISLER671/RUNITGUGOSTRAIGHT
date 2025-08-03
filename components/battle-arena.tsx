@@ -4,15 +4,17 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import { Zap, Trophy, Skull, Coins, Flame, RotateCcw, Clock } from "lucide-react"
+import { Trophy, Skull, Coins, Flame, RotateCcw, Clock, AlertTriangle } from "lucide-react"
 import { falImageService } from "@/lib/fal"
 
 interface Character {
   id: string
   name: string
   image: string
+  collection?: string
   winRate?: number
   rank?: number
+  type?: "nft" | "upload"
 }
 
 interface BattleArenaProps {
@@ -52,6 +54,7 @@ export default function BattleArena({
   const [imageGenerating, setImageGenerating] = useState(false)
   const [fatalityGenerating, setFatalityGenerating] = useState(false)
   const [generationTimer, setGenerationTimer] = useState(0)
+  const [fatalityError, setFatalityError] = useState(false)
 
   const startBattle = async () => {
     setBattlePhase("countdown")
@@ -67,18 +70,18 @@ export default function BattleArena({
     setBattleCommentary("🎨 GENERATING YOUR FIGHTER'S POV...")
     console.log("🥊 PHASE 1: Starting contender POV generation...")
 
-    // Generate contender POV
+    // Generate contender POV with enhanced character analysis
     await generateContenderPOV()
 
     // Wait a moment for state to update, then check
     await new Promise((resolve) => setTimeout(resolve, 500))
 
-    // Show contender POV for 30 seconds
+    // Show contender POV for 15 seconds
     console.log("🥊 Checking contender image:", contenderImage)
     setBattleCommentary("📸 YOUR FIGHTER'S VIEW!")
     setShowingPOV(true)
     setCurrentPOV("contender")
-    await new Promise((resolve) => setTimeout(resolve, 15000)) // 20 seconds display
+    await new Promise((resolve) => setTimeout(resolve, 15000)) // 15 seconds display
     setShowingPOV(false)
     setCurrentPOV(null)
 
@@ -101,18 +104,18 @@ export default function BattleArena({
     setScreenShake(true)
     console.log("⚔️ PHASE 2: Starting challenger POV generation...")
 
-    // Generate challenger POV
+    // Generate challenger POV with enhanced character analysis
     await generateChallengerPOV()
 
     // Wait a moment for state to update, then check
     await new Promise((resolve) => setTimeout(resolve, 500))
 
-    // Show challenger POV for 30 seconds
+    // Show challenger POV for 15 seconds
     console.log("⚔️ Checking challenger image:", challengerImage)
     setBattleCommentary("📸 CHALLENGER'S VIEW!")
     setShowingPOV(true)
     setCurrentPOV("challenger")
-    await new Promise((resolve) => setTimeout(resolve, 15000)) // 20 seconds display
+    await new Promise((resolve) => setTimeout(resolve, 15000)) // 15 seconds display
     setShowingPOV(false)
     setCurrentPOV(null)
 
@@ -154,40 +157,24 @@ export default function BattleArena({
     setBattleCommentary("🎯 GENERATING EPIC FATALITY SCENE...")
     console.log("🎯 PHASE 3: Starting fatality generation...")
 
-    // Generate fatality image
+    // Generate fatality image with enhanced character analysis
     await generateFatalityImage(battleWinner)
     await new Promise((resolve) => setTimeout(resolve, 1000)) // Wait for state update
 
     setBattleCommentary(battleWinner === "player" ? "🏆 FATALITY! YOU WIN!" : "💀 FATALITY! YOU LOSE!")
-
-    // Calculate new balance
-    // let newBalance = userBalance
-    // if (betAmount > 0) {
-    //   if (battleWinner === "player") {
-    //     const opponentRank = opponent.rank || 5
-    //     const getMultiplier = (rank) => {
-    //       if (rank <= 2) return 1.2
-    //       if (rank <= 4) return 1.8
-    //       if (rank <= 6) return 2.5
-    //       if (rank <= 8) return 3.5
-    //       return 5.0
-    //     }
-    //     const multiplier = getMultiplier(opponentRank)
-    //     newBalance = userBalance + Math.floor(betAmount * multiplier) - betAmount
-    //   } else {
-    //     newBalance = userBalance - betAmount
-    //   }
-    // }
-
-    // onBattleComplete(battleWinner, newBalance)
   }
 
   const generateContenderPOV = async () => {
     try {
       setImageGenerating(true)
-      console.log("🥊 Starting contender POV generation...")
+      console.log("🥊 Starting contender POV generation with character analysis...")
+      console.log("🥊 Character details:", {
+        name: character.name,
+        collection: character.collection,
+        type: character.type,
+      })
 
-      const imageUrl = await falImageService.generateBattlePOV(character.name, opponent.name, "charging")
+      const imageUrl = await falImageService.generateBattlePOV(character, opponent, "charging")
       console.log("🥊 Contender POV result:", imageUrl)
 
       if (imageUrl) {
@@ -210,9 +197,10 @@ export default function BattleArena({
   const generateChallengerPOV = async () => {
     try {
       setImageGenerating(true)
-      console.log("⚔️ Starting challenger POV generation...")
+      console.log("⚔️ Starting challenger POV generation with character analysis...")
+      console.log("⚔️ Opponent details:", { name: opponent.name, collection: opponent.collection })
 
-      const imageUrl = await falImageService.generateBattlePOV(opponent.name, character.name, "collision")
+      const imageUrl = await falImageService.generateBattlePOV(opponent, character, "collision")
       console.log("⚔️ Challenger POV result:", imageUrl)
 
       if (imageUrl) {
@@ -235,29 +223,30 @@ export default function BattleArena({
   const generateFatalityImage = async (winner: "player" | "opponent") => {
     try {
       setFatalityGenerating(true)
-      console.log("🎯 STARTING FATALITY IMAGE GENERATION...")
+      setFatalityError(false)
+      console.log("🎯 STARTING FATALITY IMAGE GENERATION WITH CHARACTER ANALYSIS...")
 
-      const winnerName = winner === "player" ? character.name : opponent.name
-      const loserName = winner === "player" ? opponent.name : character.name
-
-      console.log(`🎯 Generating FATALITY: ${winnerName} defeats ${loserName}`)
-
-      const imageUrl = await falImageService.generateFatalityImage(winnerName, loserName)
+      const imageUrl = await falImageService.generateFatalityImage(character, opponent, winner)
       console.log("🎯 FATALITY IMAGE RESULT:", imageUrl)
 
       if (imageUrl) {
         setFatalityImage(imageUrl)
         console.log("🎯 FATALITY IMAGE SET SUCCESSFULLY:", imageUrl)
       } else {
-        console.log("🎯 No fatality image URL returned, using fallback")
-        const fatalityQuery = `MORTAL KOMBAT FATALITY: ${winnerName} defeats ${loserName} in epic finishing move, dramatic victory pose, cinematic lighting`
+        console.log("🎯 No fatality image URL returned, setting error state")
+        setFatalityError(true)
+        // Create a more descriptive fallback
+        const winnerName = winner === "player" ? character.name : opponent.name
+        const loserName = winner === "player" ? opponent.name : character.name
+        const fatalityQuery = `EPIC FATALITY: ${winnerName} defeats ${loserName} in dramatic victory pose, battle arena, cinematic lighting, fighting game style`
         setFatalityImage(`/placeholder.svg?height=500&width=500&query=${encodeURIComponent(fatalityQuery)}`)
       }
     } catch (error) {
       console.error("🎯 Error generating fatality image:", error)
+      setFatalityError(true)
       const winnerName = winner === "player" ? character.name : opponent.name
       const loserName = winner === "player" ? opponent.name : character.name
-      const fatalityQuery = `MORTAL KOMBAT FATALITY: ${winnerName} defeats ${loserName} in epic finishing move, dramatic victory pose, cinematic lighting`
+      const fatalityQuery = `EPIC FATALITY: ${winnerName} defeats ${loserName} in dramatic victory pose, battle arena, cinematic lighting, fighting game style`
       setFatalityImage(`/placeholder.svg?height=500&width=500&query=${encodeURIComponent(fatalityQuery)}`)
     } finally {
       setFatalityGenerating(false)
@@ -281,6 +270,7 @@ export default function BattleArena({
     setImageGenerating(false)
     setFatalityGenerating(false)
     setGenerationTimer(0)
+    setFatalityError(false)
   }
 
   return (
@@ -288,10 +278,7 @@ export default function BattleArena({
       {battlePhase === "ready" && (
         <Card className="bg-black/60 border-purple-500/50 shadow-2xl">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl text-green-500">
-              
-              READY TO RUN IT?
-            </CardTitle>
+            <CardTitle className="text-2xl text-green-500">READY TO RUN IT?</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex justify-between items-center p-4 bg-purple-900/30 rounded-sm">
@@ -303,6 +290,7 @@ export default function BattleArena({
                 />
                 <p className="text-sm text-white font-semibold">{character.name}</p>
                 <p className="text-xs text-green-400">CONTENDER</p>
+                {character.collection && <p className="text-xs text-gray-400">{character.collection}</p>}
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold text-red-500 animate-pulse">VS</div>
@@ -341,13 +329,13 @@ export default function BattleArena({
               onClick={startBattle}
               className="w-full h-16 bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 hover:from-red-600 hover:via-orange-600 hover:to-yellow-600 font-black text-xl shadow-2xl transform hover:scale-105 transition-all text-lime-500 rounded-3xl"
             >
-              
               RUN IT STRAIGHT! 💥
             </Button>
 
             <div className="text-center space-y-2">
-              <p className="text-yellow-400 text-sm">🎨 3 AI Generated Images Per Battle:             </p>
-              <p className="text-yellow-300 text-xs">Contender POV → Challenger POV → Epic Fatality Scene</p>
+              <p className="text-yellow-400 text-sm">🎨 3 AI Generated Images Per Battle:</p>
+              <p className="text-yellow-300 text-xs">Enhanced prompts based on your character's appearance!</p>
+              <p className="text-green-400 text-xs">✨ Now with improved error handling for reliable generation</p>
             </div>
           </CardContent>
         </Card>
@@ -409,8 +397,8 @@ export default function BattleArena({
                         />
                         <div className="p-6 bg-gradient-to-r from-green-900/70 to-emerald-900/70 rounded-xl border-2 border-green-500/70">
                           <p className="text-green-300 font-bold text-2xl">🎨 AI-Generated by Fal.ai</p>
-                          <p className="text-green-200 text-xl mt-2">Charging toward {opponent.name}!</p>
-                          <p className="text-green-100 text-lg mt-2">Displaying for 20 seconds...</p>
+                          <p className="text-green-200 text-xl mt-2">Enhanced with character analysis!</p>
+                          <p className="text-green-100 text-lg mt-2">Charging toward {opponent.name}!</p>
                         </div>
                       </div>
                     </>
@@ -433,8 +421,8 @@ export default function BattleArena({
                         />
                         <div className="p-6 bg-gradient-to-r from-red-900/70 to-rose-900/70 rounded-xl border-2 border-red-500/70">
                           <p className="text-red-300 font-bold text-2xl">🎨 AI-Generated by Fal.ai</p>
-                          <p className="text-red-200 text-xl mt-2">Mid-collision with {character.name}!</p>
-                          <p className="text-red-100 text-lg mt-2">Displaying for 20 seconds...</p>
+                          <p className="text-red-200 text-xl mt-2">Enhanced with character analysis!</p>
+                          <p className="text-red-100 text-lg mt-2">Mid-collision with {character.name}!</p>
                         </div>
                       </div>
                     </>
@@ -549,6 +537,19 @@ export default function BattleArena({
                 </div>
               )}
 
+              {/* Error Notice */}
+              {fatalityError && (
+                <div className="p-4 bg-orange-900/30 rounded-lg border border-orange-500/50">
+                  <div className="flex items-center gap-3 text-orange-400">
+                    <AlertTriangle className="h-5 w-5" />
+                    <div>
+                      <p className="font-bold">AI Generation Issue</p>
+                      <p className="text-sm">Using fallback image - the battle was still epic! 🎯</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* EPIC FATALITY IMAGE SECTION */}
               <div className="text-center space-y-6">
                 {fatalityImage ? (
@@ -559,17 +560,22 @@ export default function BattleArena({
                       className="w-full max-w-4xl mx-auto rounded-2xl border-4 border-yellow-500 shadow-2xl shadow-yellow-500/50 transform hover:scale-105 transition-all duration-300"
                       onError={(e) => {
                         console.error("Fatality image failed to load:", fatalityImage)
-                        e.currentTarget.src = "/placeholder.svg?height=500&width=500"
+                        setFatalityError(true)
+                        e.currentTarget.src = "/placeholder.svg?height=500&width=500&text=Epic+Fatality+Scene"
                       }}
                       onLoad={() => console.log("🎯 Fatality image displayed successfully!")}
                     />
                     <div className="p-6 bg-gradient-to-r from-yellow-900/70 to-orange-900/70 rounded-2xl border-2 border-yellow-500/70 shadow-xl">
-                      <p className="text-yellow-400 font-black text-3xl mb-3">🎯 EPIC FATALITY CAPTURED!</p>
-                      <p className="text-yellow-300 text-xl mb-2">🎨 AI-Generated by Fal.ai</p>
+                      <p className="text-yellow-400 font-black text-3xl mb-3">
+                        {fatalityError ? "🎯 EPIC BATTLE CONCLUDED!" : "🎯 EPIC FATALITY CAPTURED!"}
+                      </p>
+                      <p className="text-yellow-300 text-xl mb-2">
+                        {fatalityError ? "🎨 Fallback Image Generated" : "🎨 AI-Generated with Character Analysis"}
+                      </p>
                       <p className="text-yellow-200 text-lg">
-                        {winner === "player"
-                          ? `${character.name} delivers the finishing blow!`
-                          : `${opponent.name} claims victory!`}
+                        {fatalityError
+                          ? "The battle was legendary even without perfect AI!"
+                          : "Enhanced prompts based on your NFT's actual appearance!"}
                       </p>
                     </div>
 
